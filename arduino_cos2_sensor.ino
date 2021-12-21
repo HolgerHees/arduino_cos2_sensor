@@ -20,9 +20,10 @@ String cfg[9];
 
 #define MAX_FIELD_LENGTH 60
 
-#include "src/Eeprom.h"
-#include "src/Setup.html.h"
-#include "src/Setup.h"
+#include "src/log.h"
+#include "src/eeprom.h"
+#include "src/setup.html.h"
+#include "src/setup.h"
 
 #define LEDpin LED_BUILTIN
 
@@ -75,8 +76,8 @@ void setup()
 
   Serial.begin(115200);
   delay(10); 
-  Serial.println("");
-  Serial.flush();
+
+  DEBUG_PRINTLN("");
 
   pinMode(LEDpin, OUTPUT);
   pinMode(SETUP_MODE_PIN, INPUT_PULLUP);
@@ -86,10 +87,7 @@ void setup()
   {
     for (int i = 0; i < 2; i++) 
     {
-      delay(500);
-      digitalWrite(LEDpin, 0);
-      delay(500);
-      digitalWrite(LEDpin, 1);
+      ledSignal(500,500);
     }
     mainSetup();
   }
@@ -98,45 +96,31 @@ void setup()
   {
     setAutoCalibrate(false);
 
-    Serial.print("Start calibration ...");
-    Serial.flush();
+    DEBUG_PRINT("Start calibration ...");
     unsigned long start = millis();
     // wait for 20 minutes (+1) calibration time
     while(millis() < start + 21 * 60 * 1000)
     {
-      delay(2000);
-      digitalWrite(LEDpin, 0);
-      delay(2000);
-      digitalWrite(LEDpin, 1);
+      ledSignal(2000,2000);
     }
     
     calibrateZero();
 
-    delay(2000);
-    digitalWrite(LEDpin, 0);
-    delay(2000);
-    digitalWrite(LEDpin, 1);
+    ledSignal(2000,2000);
 
-    Serial.println(" done");
-    Serial.flush();
+    DEBUG_PRINTLN(" done");
   }
 
-  Serial.print("Connect wifi ...");
-  Serial.flush();
+  DEBUG_PRINT("Connect wifi ...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(cfg[CFG_WIFI_SSID], cfg[CFG_WIFI_PASSWORD]);
   while(WiFi.status() != WL_CONNECTED)
   {
-    delay(500);
-    digitalWrite(LEDpin, 0);
-    delay(500);
-    digitalWrite(LEDpin, 1);
+    ledSignal(500,500);
   }
-  Serial.println(" done");
-  Serial.flush();
+  DEBUG_PRINTLN(" done");
 
-  Serial.print("Wait for sensor to become ready ...");
-  Serial.flush();
+  DEBUG_PRINT("Wait for sensor to become ready ...");
   unsigned long start = millis();
   int value = -1;
   // wait for 60 seconds
@@ -145,62 +129,22 @@ void setup()
     value = readCO2UART();
     if( value != -1 ) break;
 
-    delay(1000);
-    digitalWrite(LEDpin, 0);
-    delay(1000);
-    digitalWrite(LEDpin, 1);
+    ledSignal(1000,1000);
   }
 
   if( value != -1 )
   {
-    Serial.println(" done");
-    Serial.println("Start measuring");
-    Serial.flush();
+    DEBUG_PRINTLN(" done");
+    DEBUG_PRINTLN("Start measuring");
   }
   else
   {
-    Serial.println(" failed");
-    Serial.flush();
+    DEBUG_PRINTLN(" failed");
     while( true )
     {
-      delay(250);
-      digitalWrite(LEDpin, 0);
-      delay(250);
-      digitalWrite(LEDpin, 1);
+      ledSignal(250,250);
     }
   }
-  
-  /*if (co2.isPreHeating()) 
-  {
-    Serial.print("Preheating ...");
-    while (co2.isPreHeating()) 
-    {
-      delay(500);
-      digitalWrite(LEDpin, 0);
-      delay(1000);
-      digitalWrite(LEDpin, 1);
-    }
-    Serial.println(" done");
-  }*/
-
-  /*if( co2.isReady() )
-  {
-    Serial.println("Start measuring");
-  }
-  else
-  {
-    Serial.println("Sensor initialisation failed");
-    while( true )
-    {
-      delay(250);
-      digitalWrite(LEDpin, 0);
-      delay(250);
-      digitalWrite(LEDpin, 1);
-    }
-  }*/
-
-  //pinMode(2, OUTPUT);
-  //digitalWrite(2, 0);
 }
 
 void loop()
@@ -226,5 +170,12 @@ void loop()
       client.loop();
     }
   }
-  yield();
+}
+
+void ledSignal(int offTime, int onTime)
+{
+  digitalWrite(LEDpin, 0);
+  delay(onTime);
+  digitalWrite(LEDpin, 1);
+  delay(offTime);
 }

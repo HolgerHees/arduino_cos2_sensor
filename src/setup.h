@@ -85,8 +85,8 @@ void mainSetup()
   httpUpdater.setup(&server);
   server.begin();
 
-  Serial.print("Starte access point \"CO2 Sensor Setup\" ");
-  Serial.println(WiFi.softAPIP());
+  DEBUG_PRINT("Starte access point \"CO2 Sensor Setup\" ");
+  DEBUG_PRINTLN(WiFi.softAPIP());
 
   while (true)
   {

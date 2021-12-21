@@ -20,10 +20,13 @@ String cfg[9];
 
 #define MAX_FIELD_LENGTH 60
 
+SoftwareSerial sensorSerial(D1, D2); // RX, TX
+
 #include "src/log.h"
 #include "src/eeprom.h"
 #include "src/setup.html.h"
 #include "src/setup.h"
+#include "src/sensor.h"
 
 #define LEDpin LED_BUILTIN
 
@@ -33,39 +36,12 @@ String cfg[9];
 WiFiClient wclient;
 PubSubClient client(wclient);
 
-SoftwareSerial sensorSerial(D1, D2); // RX, TX
-
-int readCO2UART()
+void ledSignal(int offTime, int onTime)
 {
-  byte cmd[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
-  char result[9];
-  sensorSerial.write(cmd, 9);
-  sensorSerial.readBytes(result, 9);
-  if(result[0] != 0xFF || result[1] != 0x86) return -1;
-  int high = (int) result[2];
-  int low = (int) result[3];
-  int ppm = (256 * high) + low;
-  return ppm;
-}
-
-void setAutoCalibrate(boolean b)
-{
-  byte cmd_enableAutoCal[9] = { 0xFF, 0x01, 0x79, 0xA0, 0x00, 0x00, 0x00, 0x00, 0xE6 };
-  byte cmd_disableAutoCal[9] = { 0xFF, 0x01, 0x79, 0x00, 0x00, 0x00, 0x00, 0x00, 0x86};
-  if(b) sensorSerial.write(cmd_enableAutoCal,9);
-  else sensorSerial.write(cmd_disableAutoCal,9);
-
-  char result;
-  while (Serial.available()) result = Serial.read();
-}
-
-void calibrateZero()
-{
-  byte cmd[9] = {0xFF, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78};
-  sensorSerial.write(cmd,9);
-
-  char result;
-  while (Serial.available()) result = Serial.read();
+  digitalWrite(LEDpin, 0);
+  delay(onTime);
+  digitalWrite(LEDpin, 1);
+  delay(offTime);
 }
 
 void setup()
@@ -170,12 +146,4 @@ void loop()
       client.loop();
     }
   }
-}
-
-void ledSignal(int offTime, int onTime)
-{
-  digitalWrite(LEDpin, 0);
-  delay(onTime);
-  digitalWrite(LEDpin, 1);
-  delay(offTime);
 }

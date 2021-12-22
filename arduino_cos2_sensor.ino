@@ -132,7 +132,14 @@ void loop()
       client.setServer(cfg[CFG_MQTT_HOST].c_str(), cfg[CFG_MQTT_PORT].toInt());
       if(client.connect(cfg[CFG_MQTT_CLIENT_NAME].c_str(),cfg[CFG_MQTT_USER].c_str(),cfg[CFG_MQTT_PASSWORD].c_str()))
       {
-        int value = readCO2UART();
+        int value;
+        while(true)
+        {
+          value = readCO2UART();
+          if( value != -1) break;
+          ledSignal(250,250);
+        }
+              
         client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
         client.loop();
         client.disconnect();

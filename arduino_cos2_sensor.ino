@@ -72,7 +72,7 @@ void setup()
   {
     setAutoCalibrate(false);
 
-    DEBUG_PRINT("Start calibration ...");
+    DEBUG_PRINT(F("Start calibration ..."));
     unsigned long start = millis();
     // wait for 20 minutes (+1) calibration time
     while(millis() < start + 21 * 60 * 1000)
@@ -84,43 +84,19 @@ void setup()
 
     ledSignal(2000,2000);
 
-    DEBUG_PRINTLN(" done");
+    DEBUG_PRINTLN(F(" done"));
   }
 
-  DEBUG_PRINT("Connect wifi ...");
+  DEBUG_PRINT(F("Connect wifi ..."));
   WiFi.mode(WIFI_STA);
   WiFi.begin(cfg[CFG_WIFI_SSID], cfg[CFG_WIFI_PASSWORD]);
   while(WiFi.status() != WL_CONNECTED)
   {
     ledSignal(500,500);
   }
-  DEBUG_PRINTLN(" done");
+  DEBUG_PRINTLN(F(" done"));
 
-  DEBUG_PRINT("Wait for sensor to become ready ...");
-  unsigned long start = millis();
-  int value = -1;
-  // wait for 60 seconds
-  while(millis() < start + 60 * 1000)
-  {
-    value = readCO2UART();
-    if( value != -1 ) break;
-
-    ledSignal(1000,1000);
-  }
-
-  if( value != -1 )
-  {
-    DEBUG_PRINTLN(" done");
-    DEBUG_PRINTLN("Start measuring");
-  }
-  else
-  {
-    DEBUG_PRINTLN(" failed");
-    while( true )
-    {
-      ledSignal(250,250);
-    }
-  }
+  DEBUG_PRINTLN(F("Start measuring"));
 }
 
 void loop()
@@ -132,20 +108,33 @@ void loop()
       client.setServer(cfg[CFG_MQTT_HOST].c_str(), cfg[CFG_MQTT_PORT].toInt());
       if(client.connect(cfg[CFG_MQTT_CLIENT_NAME].c_str(),cfg[CFG_MQTT_USER].c_str(),cfg[CFG_MQTT_PASSWORD].c_str()))
       {
-        int value;
-        while(true)
+        unsigned long start = millis();
+        int value = -1;
+        // wait for max 60 seconds => can happen only durinmg the initial warmup phase, but there is no way to detect this phase after a deepSleep
+        while(millis() < start + 60 * 1000)
         {
           value = readCO2UART();
-          if( value != -1) break;
-          ledSignal(250,250);
+          if( value != -1 ) break;
+      
+          ledSignal(1000,1000);
         }
-              
-        client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
-        client.loop();
-        client.disconnect();
 
-        int interval = cfg[CFG_INTERVAL].toInt();
-        ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
+        if( value != -1 )
+        {
+          client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
+          client.loop();
+          client.disconnect();
+  
+          int interval = cfg[CFG_INTERVAL].toInt();
+          ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
+        }
+        else
+        {
+          while( true )
+          {
+            ledSignal(250,250);
+          }
+        }
       }
     }
     else

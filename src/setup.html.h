@@ -94,11 +94,11 @@ const char SETUP_PAGE[] PROGMEM = R"=====(
       </div>
       <div class="tr">
         <div>SSID:</div>
-        <div><input maxlength="60"  name="0" size="45" type="text"></div>
+        <div><input maxlength="60" name="0" size="45" type="text"></div>
       </div>
       <div class="tr">
         <div>Password:</div>
-        <div><input maxlength="60"  name="1" size="45" type="text"></div>
+        <div><input maxlength="60" name="1" size="45" type="text"></div>
       </div>
       <div class="tr header">
         <div>MQTT Server</div>
@@ -106,19 +106,19 @@ const char SETUP_PAGE[] PROGMEM = R"=====(
       </div>
       <div class="tr">
         <div>Host:</div>
-        <div><input maxlength="60"  name="2" size="45" type="text"></div>
+        <div><input maxlength="60" name="2" size="45" type="text"></div>
       </div>
       <div class="tr">
         <div>Port:</div>
-        <div><input maxlength="60"  name="3" size="10" type="text"></div>
+        <div><input maxlength="60" name="3" size="5" type="text"></div>
       </div>
       <div class="tr">
         <div>User:</div>
-        <div><input maxlength="60"  name="4" size="45" type="text"></div>
+        <div><input maxlength="60" name="4" size="45" type="text"></div>
       </div>
       <div class="tr">
         <div>Password:</div>
-        <div><input maxlength="60"  name="5" size="45" type="text"></div>
+        <div><input maxlength="60" name="5" size="45" type="text"></div>
       </div>
     
       <div class="tr header">
@@ -127,15 +127,23 @@ const char SETUP_PAGE[] PROGMEM = R"=====(
       </div>
       <div class="tr">
         <div>Name:</div>
-        <div><input maxlength="60"  name="6" size="45" type="text"></div>
+        <div><input maxlength="60" name="6" size="45" type="text"></div>
       </div>
       <div class="tr">
         <div>Topic:</div>
-        <div><input maxlength="60"  name="7" size="45" type="text"></div>
+        <div><input maxlength="60" name="7" size="45" type="text"></div>
+      </div>
+      <div class="tr header">
+        <div>Sensor</div>
+        <div><hr/></div>
       </div>
       <div class="tr">
-        <div>Interval in minutes:</div>
-        <div><input maxlength="60"  name="8" size="45" type="text"></div>
+        <div>Interval:</div>
+        <div><input maxlength="60"  name="8" size="5" type="text"> minutes</div>
+      </div>
+      <div class="tr">
+        <div>Auto calibrate:</div>
+        <div><input name="9" value="1" type="checkbox"></div>
       </div>
       <div class="tr">
         <div>&nbsp;</div>
@@ -150,7 +158,18 @@ const char SETUP_PAGE[] PROGMEM = R"=====(
   </div>
 
   <script type="text/javascript">
-  for (i=0;i<9;i++) document.getElementsByTagName("input")[i].value=data[i];
+  for (i=0;i<10;i++) 
+  { 
+      var element = document.getElementsByTagName("input")[i];
+      if (element.type == 'checkbox') 
+      {
+          element.checked = data[i] == "1" ? true : false;
+      }
+      else
+      {
+          element.value=data[i];
+      }
+  }
   document.getElementById("successMsg").innerHTML=successMsg;
   </script>
 </body></html>

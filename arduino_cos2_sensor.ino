@@ -7,7 +7,7 @@
 ESP8266WebServer server;
 IPAddress apIP(192, 168, 4, 1);
 
-String cfg[9];
+String cfg[10];
 #define CFG_WIFI_SSID 0
 #define CFG_WIFI_PASSWORD 1
 #define CFG_MQTT_HOST 2
@@ -16,7 +16,8 @@ String cfg[9];
 #define CFG_MQTT_PASSWORD 5
 #define CFG_MQTT_CLIENT_NAME 6
 #define CFG_MQTT_CLIENT_TOPIC 7
-#define CFG_INTERVAL 8
+#define CFG_SENSOR_INTERVAL 8
+#define CFG_SENSOR_AUTO_CALIBRATE 9
 
 #define MAX_FIELD_LENGTH 60
 
@@ -24,9 +25,9 @@ SoftwareSerial sensorSerial(D1, D2); // RX, TX
 
 #include "src/log.h"
 #include "src/eeprom.h"
+#include "src/sensor.h"
 #include "src/setup.html.h"
 #include "src/setup.h"
-#include "src/sensor.h"
 
 #define LEDpin LED_BUILTIN
 
@@ -59,7 +60,8 @@ void setup()
   pinMode(SETUP_MODE_PIN, INPUT_PULLUP);
   pinMode(CALIBRATION_MODE_PIN, INPUT_PULLUP);
 
-  if( !digitalRead(SETUP_MODE_PIN) || cfg[CFG_WIFI_SSID][0] > 127 )
+  if( !digitalRead(SETUP_MODE_PIN) )
+  //|| cfg[CFG_WIFI_SSID][0] > 127 )
   {
     for (int i = 0; i < 2; i++) 
     {
@@ -70,8 +72,6 @@ void setup()
 
   if( !digitalRead(CALIBRATION_MODE_PIN) )
   {
-    setAutoCalibrate(false);
-
     DEBUG_PRINT(F("Start calibration ..."));
     unsigned long start = millis();
     // wait for 20 minutes (+1) calibration time
@@ -125,7 +125,7 @@ void loop()
           client.loop();
           client.disconnect();
   
-          int interval = cfg[CFG_INTERVAL].toInt();
+          int interval = cfg[CFG_SENSOR_INTERVAL].toInt();
           ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
         }
         else

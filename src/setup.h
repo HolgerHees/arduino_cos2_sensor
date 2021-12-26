@@ -21,15 +21,12 @@ void handleJSDataFile()
   int i;
   String temp = "var data = [";
   String TempDaten;
-  if (cfg[CFG_WIFI_SSID][0] < 128)
+  temp += "\"" + cfg[CFG_WIFI_SSID] + "\", ";
+  String dummyPassword = cfg[CFG_WIFI_PASSWORD].length() > 2 ? generateDummyPassword(cfg[CFG_WIFI_PASSWORD]) : "";
+  temp += "\"" + dummyPassword + "\"";
+  for (i = 2; i < 10; i++)
   {
-    temp += "\"" + cfg[CFG_WIFI_SSID] + "\", ";
-    String dummyPassword = generateDummyPassword(cfg[CFG_WIFI_PASSWORD]);
-    temp += "\"" + dummyPassword + "\"";
-    for (i = 2; i < 9; i++)
-    {
-      temp += ", \"" + cfg[i] + "\"";
-    }
+    temp += ", \"" + cfg[i] + "\"";
   }
   temp += " ]\r\n";
   temp += "var successMsg=\"" + successMsg + "\"\r\n";
@@ -40,15 +37,18 @@ void handleJSDataFile()
 void handleSubmitPage()
 {
   cfg[CFG_WIFI_SSID] = server.arg(0);
-  String dummyPassword = generateDummyPassword(cfg[CFG_WIFI_PASSWORD]);
+  String dummyPassword = cfg[CFG_WIFI_PASSWORD].length() > 2 ? generateDummyPassword(cfg[CFG_WIFI_PASSWORD]) : "";
   String temp1 = server.arg(1);
   if(temp1 != dummyPassword) cfg[CFG_WIFI_PASSWORD] = temp1;
-  for(int i = 2; i < 9; i++)
-  {
-    cfg[i] = server.arg(i);
-  }
-  writeEepromConfig();
 
+  for(int i = 2; i < 10; i++)
+  {
+    cfg[i] = String(i) == server.argName(i) ? server.arg(i) : "";
+  }
+  writeEepromConfig(); 
+ 
+  setAutoCalibrate( cfg[CFG_SENSOR_AUTO_CALIBRATE].length() > 0 );
+  
   successMsg = "Gespeichert!";
   server.sendHeader("Cache-Control", "no-cache");
   server.send(200, "text/html", SETUP_PAGE);

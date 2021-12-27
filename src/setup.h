@@ -47,7 +47,7 @@ void handleSubmitPage()
   }
   writeEepromConfig(); 
  
-  setAutoCalibrate( cfg[CFG_SENSOR_AUTO_CALIBRATE].length() > 0 );
+  setAutoCalibrate( cfg[CFG_SENSOR_AUTO_CALIBRATE] == "1" );
   
   successMsg = "Gespeichert!";
   server.sendHeader("Cache-Control", "no-cache");

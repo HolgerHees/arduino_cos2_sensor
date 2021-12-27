@@ -72,6 +72,13 @@ void setup()
 
   if( !digitalRead(CALIBRATION_MODE_PIN) )
   {
+    if( cfg[CFG_SENSOR_AUTO_CALIBRATE] != "1" )
+    {
+      cfg[CFG_SENSOR_AUTO_CALIBRATE] = "1";
+      writeEepromConfig(); 
+      setAutoCalibrate( true );
+    }
+      
     DEBUG_PRINT(F("Start calibration ..."));
     unsigned long start = millis();
     // wait for 20 minutes (+1) calibration time
@@ -114,7 +121,8 @@ void loop()
         while(millis() < start + 60 * 1000)
         {
           value = readCO2UART();
-          if( value != -1 ) break;
+          // value must be lower then 10000, because max. detection range is between 400 and 5000. All other values are false values.
+          if( value != -1 && value < 10000 ) break;
       
           ledSignal(1000,1000);
         }

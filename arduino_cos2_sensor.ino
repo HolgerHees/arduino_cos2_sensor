@@ -37,6 +37,8 @@ SoftwareSerial sensorSerial(D1, D2); // RX, TX
 WiFiClient wclient;
 PubSubClient client(wclient);
 
+bool isSigngleMessurement = false; 
+
 void ledSignal(int offTime, int onTime)
 {
   digitalWrite(LEDpin, 0);
@@ -92,6 +94,8 @@ void setup()
     ledSignal(2000,2000);
 
     DEBUG_PRINTLN(F(" done"));
+
+    isSigngleMessurement = true;
   }
 
   DEBUG_PRINT(F("Connect wifi ..."));
@@ -132,16 +136,17 @@ void loop()
           client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
           client.loop();
           client.disconnect();
-  
-          int interval = cfg[CFG_SENSOR_INTERVAL].toInt();
-          ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
-        }
-        else
-        {
-          while( true )
+
+          if( !isSigngleMessurement )
           {
-            ledSignal(250,250);
+            int interval = cfg[CFG_SENSOR_INTERVAL].toInt();
+            ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
           }
+        }
+
+        while( true )
+        {
+          ledSignal(250,250);
         }
       }
     }

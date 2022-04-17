@@ -37,122 +37,140 @@ SoftwareSerial sensorSerial(D1, D2); // RX, TX
 WiFiClient wclient;
 PubSubClient client(wclient);
 
-bool isSigngleMessurement = false; 
+long lastReconnectAttempt = 0;
 
 void ledSignal(int offTime, int onTime)
 {
-  digitalWrite(LEDpin, 0);
-  delay(onTime);
-  digitalWrite(LEDpin, 1);
-  delay(offTime);
+    digitalWrite(LEDpin, 0);
+    delay(onTime);
+    digitalWrite(LEDpin, 1);
+    delay(offTime);
 }
 
 void setup()
 {
-  initEepromConfig();
-
-  sensorSerial.begin(9600);
-
-  Serial.begin(115200);
-  delay(10); 
-
-  DEBUG_PRINTLN("");
-
-  pinMode(LEDpin, OUTPUT);
-  pinMode(SETUP_MODE_PIN, INPUT_PULLUP);
-  pinMode(CALIBRATION_MODE_PIN, INPUT_PULLUP);
-
-  if( !digitalRead(SETUP_MODE_PIN) )
-  //|| cfg[CFG_WIFI_SSID][0] > 127 )
-  {
-    for (int i = 0; i < 2; i++) 
+    initEepromConfig();
+    
+    sensorSerial.begin(9600);
+    
+    Serial.begin(115200);
+    delay(10); 
+    
+    DEBUG_PRINTLN("");
+    
+    pinMode(LEDpin, OUTPUT);
+    pinMode(SETUP_MODE_PIN, INPUT_PULLUP);
+    pinMode(CALIBRATION_MODE_PIN, INPUT_PULLUP);
+    
+    if( !digitalRead(SETUP_MODE_PIN) )
+    //|| cfg[CFG_WIFI_SSID][0] > 127 )
     {
-      ledSignal(500,500);
-    }
-    mainSetup();
-  }
-
-  if( !digitalRead(CALIBRATION_MODE_PIN) )
-  {
-    if( cfg[CFG_SENSOR_AUTO_CALIBRATE] != "1" )
-    {
-      cfg[CFG_SENSOR_AUTO_CALIBRATE] = "1";
-      writeEepromConfig(); 
-      setAutoCalibrate( true );
-    }
-      
-    DEBUG_PRINT(F("Start calibration ..."));
-    unsigned long start = millis();
-    // wait for 20 minutes (+1) calibration time
-    while(millis() < start + 21 * 60 * 1000)
-    {
-      ledSignal(2000,2000);
+        for (int i = 0; i < 2; i++) 
+        {
+            ledSignal(500,500);
+        }
+        mainSetup();
     }
     
-    calibrateZero();
-
-    ledSignal(2000,2000);
-
-    DEBUG_PRINTLN(F(" done"));
-
-    isSigngleMessurement = true;
-  }
-
-  DEBUG_PRINT(F("Connect wifi ..."));
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(cfg[CFG_WIFI_SSID], cfg[CFG_WIFI_PASSWORD]);
-  while(WiFi.status() != WL_CONNECTED)
-  {
-    ledSignal(500,500);
-  }
-  DEBUG_PRINTLN(F(" done"));
-
-  DEBUG_PRINTLN(F("Start measuring"));
+    if( !digitalRead(CALIBRATION_MODE_PIN) )
+    {
+        if( cfg[CFG_SENSOR_AUTO_CALIBRATE] != "1" )
+        {
+            cfg[CFG_SENSOR_AUTO_CALIBRATE] = "1";
+            writeEepromConfig(); 
+            setAutoCalibrate( true );
+        }
+        
+        DEBUG_PRINT(F("Start calibration ..."));
+        unsigned long start = millis();
+        // wait for 20 minutes (+1) calibration time
+        while(millis() < start + 21 * 60 * 1000)
+        {
+            ledSignal(2000,2000);
+        }
+      
+        calibrateZero();
+    
+        ledSignal(2000,2000);
+    
+        DEBUG_PRINTLN(F(" done"));
+    }
+    
+    WiFi.mode(WIFI_STA);
+    client.setServer(cfg[CFG_MQTT_HOST].c_str(), cfg[CFG_MQTT_PORT].toInt());
 }
 
 void loop()
 {
-  if(WiFi.status() == WL_CONNECTED)
-  {
-    if(!client.connected())
+    if( WiFi.status() != WL_CONNECTED )
     {
-      client.setServer(cfg[CFG_MQTT_HOST].c_str(), cfg[CFG_MQTT_PORT].toInt());
-      if(client.connect(cfg[CFG_MQTT_CLIENT_NAME].c_str(),cfg[CFG_MQTT_USER].c_str(),cfg[CFG_MQTT_PASSWORD].c_str()))
-      {
-        unsigned long start = millis();
-        int value = -1;
-        // wait for max 60 seconds => can happen only durinmg the initial warmup phase, but there is no way to detect this phase after a deepSleep
-        while(millis() < start + 60 * 1000)
+        DEBUG_PRINT(F("Connect wifi ..."));
+        WiFi.begin(cfg[CFG_WIFI_SSID], cfg[CFG_WIFI_PASSWORD]);
+        while(WiFi.status() != WL_CONNECTED)
         {
-          value = readCO2UART();
-          // value must be lower then 10000, because max. detection range is between 400 and 5000. All other values are false values.
-          if( value != -1 && value < 10000 ) break;
-      
-          ledSignal(1000,1000);
+            DEBUG_PRINT(F("."));
+            ledSignal(500,500);
+        }
+        DEBUG_PRINTLN(F(" done"));
+    }
+    
+    while( !client.connected() )
+    {
+        DEBUG_PRINT(F("Connect mqtt ..."));
+        if( client.connect(cfg[CFG_MQTT_CLIENT_NAME].c_str(),cfg[CFG_MQTT_USER].c_str(),cfg[CFG_MQTT_PASSWORD].c_str()) )
+        {
+            DEBUG_PRINTLN(F(" done"));
+            break;
         }
 
-        if( value != -1 )
-        {
-          client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
-          client.loop();
-          client.disconnect();
+        DEBUG_PRINT(F("."));
+        delay(1000);
+    }
 
-          if( !isSigngleMessurement )
-          {
-            int interval = cfg[CFG_SENSOR_INTERVAL].toInt();
-            ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
-          }
+    client.loop();
+
+    DEBUG_PRINT(F("Start meassuring ..."));
+    unsigned long start = millis();
+    int value = -1;
+    // wait for max 60 seconds => can happen only durinmg the initial warmup phase, but there is no way to detect this phase after a deepSleep
+    while(millis() < start + 60 * 1000)
+    {
+        value = readCO2UART();
+        // value must be lower then 10000, because max. detection range is between 400 and 5000. All other values are false values.
+        if( value != -1 && value < 10000 ) 
+        {
+            DEBUG_PRINTLN(F(" done"));
+            break;
         }
 
-        while( true )
+        DEBUG_PRINT(F("."));
+        ledSignal(1000,1000);
+    }
+
+    DEBUG_PRINT(F("Publish values ..."));
+    if( value != -1 )
+    {
+        client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
+        client.loop();
+        client.disconnect();
+
+        DEBUG_PRINTLN(F(" done"));
+        /*if( !isSigngleMessurement )
         {
-          ledSignal(250,250);
-        }
-      }
+          int interval = cfg[CFG_SENSOR_INTERVAL].toInt();
+          ESP.deepSleep(interval * 60e6, WAKE_RFCAL);
+        }*/
     }
     else
     {
-      client.loop();
+        DEBUG_PRINTLN(F(" error"));
     }
-  }
+
+    client.loop();
+
+    DEBUG_PRINT(F("Delay for "));
+    DEBUG_PRINT(cfg[CFG_SENSOR_INTERVAL].toInt());
+    DEBUG_PRINT(F(" minutes ..."));
+    delay(cfg[CFG_SENSOR_INTERVAL].toInt() * 60000);
+    DEBUG_PRINTLN(F(" done"));
 }

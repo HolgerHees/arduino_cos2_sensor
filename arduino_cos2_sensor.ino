@@ -151,8 +151,8 @@ void loop()
     if( value != -1 )
     {
         client.publish(cfg[CFG_MQTT_CLIENT_TOPIC].c_str(), String(value).c_str());
-        client.loop();
-        client.disconnect();
+        // client.loop();
+        // client.disconnect();
 
         DEBUG_PRINTLN(F(" done"));
         /*if( !isSigngleMessurement )

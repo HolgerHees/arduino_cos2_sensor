@@ -106,6 +106,7 @@ void loop()
     {
         DEBUG_PRINT(F("Connect wifi ..."));
         WiFi.begin(cfg[CFG_WIFI_SSID], cfg[CFG_WIFI_PASSWORD]);
+
         while(WiFi.status() != WL_CONNECTED)
         {
             DEBUG_PRINT(F("."));

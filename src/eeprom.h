@@ -26,7 +26,7 @@ int writeEeprom(int eepromIndex, String k)
   String hexNumber;
   String replacement = "f";
 
-  k.replace("+", " ");
+  /*k.replace("+", " ");
 
   while(counter--)
   {
@@ -37,8 +37,10 @@ int writeEeprom(int eepromIndex, String k)
     replacement[0] = value;
     hexNumber = "%" + hexNumber;
     k.replace(hexNumber, replacement);
-  }
+  }*/
   
+  //DEBUG_PRINTLN(k);
+
   int i = 0;
   while (k[i])
   {
